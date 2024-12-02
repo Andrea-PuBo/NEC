@@ -1,14 +1,15 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class NeuralNet:
-    def __init__(self, layers, epochs, learning_rate, momentum, activation='sigmoid', val_split=0.2):
+    def __init__(self, layers, epochs, learning_rate, momentum, fact, val_split):
         self.L = len(layers)  # Number of layers
         self.n = layers       # Number of units in each layer
         self.epochs = epochs  # Number of training epochs
         self.lr = learning_rate  # Learning rate
         self.momentum = momentum  # Momentum term
-        self.activation_name = activation  # Activation function
+        self.fact = fact  # Activation function
         self.val_split = val_split  # Validation set percentage
 
         # Initialize activations, weights, thresholds, and other variables
@@ -26,101 +27,127 @@ class NeuralNet:
         self.train_losses = []
         self.val_losses = []
 
-
     def activation(self, h):
-      if self.activation_name == 'sigmoid':
-        return 1 / (1 + np.exp(-h))
-      elif self.activation_name == 'relu':
-        return np.maximum(0, h)
-      elif self.activation_name == 'tanh':
-        return np.tanh(h)
-      elif self.activation_name == 'linear':
-        return h
-
+        # Compute the activation function
+        if self.fact == 'sigmoid':
+            return 1 / (1 + np.exp(-h))
+        elif self.fact == 'relu':
+            return np.maximum(0, h)
+        elif self.fact == 'tanh':
+            return np.tanh(h)
+        elif self.fact == 'linear':
+            return h
 
     def activation_derivative(self, h):
-      if self.activation_name == 'sigmoid':
-        return self.activation(h) * (1 - self.activation(h))
-      elif self.activation_name == 'relu':
-        return (h > 0).astype(float)
-      elif self.activation_name == 'tanh':
-        return 1 - np.tanh(h) ** 2
-      elif self.activation_name == 'linear':
-        return np.ones_like(h)
-
+        # Compute the derivative of the activation function
+        if self.fact == 'sigmoid':
+            act = 1 / (1 + np.exp(-h))
+            return act * (1 - act)
+        elif self.fact == 'relu':
+            return np.where(h > 0, 1, 0)
+        elif self.fact == 'tanh':
+            return 1 - np.tanh(h) ** 2
+        elif self.fact == 'linear':
+            return np.ones_like(h)
 
     def forward(self, X):
+      # Compute forward propagation
+
       self.xi[0] = X  # Input layer activations
       for l in range(1, self.L):
         self.h[l] = np.dot(self.w[l], self.xi[l - 1]) - self.theta[l]
         self.xi[l] = self.activation(self.h[l])
       return self.xi[-1]  # Return output layer activations
 
-
     def backward(self, y_true):
+      # Compute backward propagation
+
       # Compute delta for the output layer
       self.delta[-1] = (self.xi[-1] - y_true) * self.activation_derivative(self.h[-1])
-
       # Propagate errors backward
       for l in range(self.L - 2, 0, -1):
         self.delta[l] = np.dot(self.w[l + 1].T, self.delta[l + 1]) * self.activation_derivative(self.h[l])
 
-      # Update weights and thresholds
-      for l in range(1, self.L):
-        self.d_w[l] = -self.lr * np.outer(self.delta[l], self.xi[l - 1]) + self.momentum * self.d_w_prev[l]
-        self.d_theta[l] = self.lr * self.delta[l] + self.momentum * self.d_theta_prev[l]
+    def update_weights_thresholds(self):
+        # Update weights and thresholds using momentum
+        for l in range(1, self.L):
+            self.d_w[l] = -self.lr * np.outer(self.delta[l], self.xi[l - 1]) + self.momentum * self.d_w_prev[l]
+            self.w[l] += self.d_w[l]
+            self.d_w_prev[l] = self.d_w[l]
 
-        self.w[l] += self.d_w[l]
-        self.theta[l] += self.d_theta[l]
-
-        self.d_w_prev[l] = self.d_w[l]
-        self.d_theta_prev[l] = self.d_theta[l]
-
+            self.d_theta[l] = self.lr * self.delta[l] + self.momentum * self.d_theta_prev[l]
+            self.theta[l] += self.d_theta[l]
+            self.d_theta_prev[l] = self.d_theta[l]
 
     def fit(self, X, y):
-      # Split data into training and validation sets
-      n_train = int((1 - self.val_split) * len(X))
-      X_train, X_val = X[:n_train], X[n_train:]
-      y_train, y_val = y[:n_train], y[n_train:]
+        # Train the neural network
 
-      for epoch in range(self.epochs):
-        # Shuffle training data
-        indices = np.random.permutation(len(X_train))
-        X_train, y_train = X_train[indices], y_train[indices]
+        # Split data into training and validation sets
+        n_train = int((1 - self.val_split) * len(X))
+        X_train, X_val = X[:n_train], X[n_train:]
+        y_train, y_val = y[:n_train], y[n_train:]
 
-        # Train on each sample
-        for i in range(len(X_train)):
-          self.forward(X_train[i])
-          self.backward(y_train[i])
+        for epoch in range(self.epochs):
+            # Shuffle training data
+            indices = np.random.permutation(len(X_train))
+            X_train, y_train = X_train[indices], y_train[indices]
 
-        # Compute losses
-        train_loss = np.mean((self.predict(X_train) - y_train) ** 2)
-        val_loss = np.mean((self.predict(X_val) - y_val) ** 2)
-        self.train_losses.append(train_loss)
-        self.val_losses.append(val_loss)
+            # Train on each sample
+            for i in range(len(X_train)):
+                self.forward(X_train[i])
+                self.backward(y_train[i])
+                self.update_weights_thresholds()
 
-        print(f"Epoch {epoch + 1}/{self.epochs}, Train Loss: {train_loss}, Val Loss: {val_loss}")
+            # Compute losses
+            train_loss = np.mean((self.predict(X_train) - y_train) ** 2)
+            val_loss = np.mean((self.predict(X_val) - y_val) ** 2)
+            self.train_losses.append(train_loss)
+            self.val_losses.append(val_loss)
+
+            print(f"Epoch {epoch + 1}/{self.epochs}, Train Loss: {train_loss}, Val Loss: {val_loss}")
 
     def predict(self, X):
-      predictions = []
-      for sample in X:
-        predictions.append(self.forward(sample))
-      return np.array(predictions)
+        # Generate predictions
+        predictions = []
+        for sample in X:
+            predictions.append(self.forward(sample))
+        return np.array(predictions)
+
+    def plot_errors(self):
+        # Plot training and validation losses
+        epochs = np.arange(1, len(self.train_losses) + 1)
+        plt.figure(figsize=(10, 6))
+        plt.plot(epochs, self.train_losses, label="Training Loss", marker='o')
+        plt.plot(epochs, self.val_losses, label="Validation Loss", marker='o')
+        plt.xlabel("Epochs")
+        plt.ylabel("Mean Squared Error (MSE)") # Loss
+        plt.legend()
+        plt.title("Training and Validation Loss Over Epochs")
+        plt.grid()
+        plt.show()
 
 
-    def loss_epochs(self):
-      return np.array([self.train_losses, self.val_losses]).T
+# Example Usage
+if __name__ == "__main__":
+    # Define network architecture and parameters
+    layers = [4, 9, 5, 1]
+    epochs = 100
+    learning_rate = 0.01
+    momentum = 0.9
+    activation_function = 'sigmoid'  # Options: 'sigmoid', 'relu', 'tanh', 'linear'
+    validation_split = 0.2  # 20% of data used for test
+
+    nn = NeuralNet(layers, epochs, learning_rate, momentum, activation_function, validation_split)
+
+    # Example synthetic dataset
+    X = np.random.rand(100, 4)  # 100 samples, 4 features
+    y = np.random.rand(100, 1)  # 100 target values
+
+    nn.fit(X, y)
+    predictions = nn.predict(X)
+
+    # Visualize training and validation errors
+    nn.plot_errors()
 
 
-layers = [4, 9, 5, 1]
-nn = NeuralNet(layers, epochs=100, learning_rate=0.01, momentum=0.9)
 
-print("L = ", nn.L, end="\n")
-print("n = ", nn.n, end="\n")
-
-print("xi = ", nn.xi, end="\n")
-print("xi[0] = ", nn.xi[0], end="\n")
-print("xi[1] = ", nn.xi[0], end="\n")
-
-print("wh = ", nn.w, end="\n")
-print("wh[1] = ", nn.w[1], end="\n")
