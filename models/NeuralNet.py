@@ -15,6 +15,8 @@ class NeuralNet:
         # Initialize activations, weights, thresholds, and other variables
         self.h = [np.zeros(n) for n in layers]  # Fields
         self.xi = [np.zeros(n) for n in layers]  # Activations
+        #self.w = [None] + [np.random.randn(layers[i], layers[i - 1]) for i in range(1, self.L)]
+        #self.theta = [None] + [np.random.randn(layers[i]) for i in range(1, self.L)]
         self.w = [None] + [np.random.randn(layers[i], layers[i-1]) * 0.01 for i in range(1, self.L)]  # Weights
         self.theta = [np.zeros(n) for n in layers]  # Thresholds
         self.delta = [np.zeros(n) for n in layers]  # Propagated errors
@@ -106,6 +108,13 @@ class NeuralNet:
 
             print(f"Epoch {epoch + 1}/{self.epochs}, Train Loss: {train_loss}, Val Loss: {val_loss}")
 
+        print("Returning from fit...")
+        print("Train Losses:", self.train_losses)
+        print("Validation Losses:", self.val_losses)
+
+        # Return the recorded losses
+        return self.train_losses, self.val_losses
+
     def predict(self, X):
         # Generate predictions
         predictions = []
@@ -117,37 +126,15 @@ class NeuralNet:
         # Plot training and validation losses
         epochs = np.arange(1, len(self.train_losses) + 1)
         plt.figure(figsize=(10, 6))
-        plt.plot(epochs, self.train_losses, label="Training Loss", marker='o')
-        plt.plot(epochs, self.val_losses, label="Validation Loss", marker='o')
+        plt.plot(epochs, self.train_losses, label="Training error", marker='o')
+        plt.plot(epochs, self.val_losses, label="Test error", marker='o')
         plt.xlabel("Epochs")
         plt.ylabel("Mean Squared Error (MSE)") # Loss
         plt.legend()
-        plt.title("Training and Validation Loss Over Epochs")
+        plt.title("Training and test error over epochs")
         plt.grid()
         plt.show()
 
-
-# Example Usage
-if __name__ == "__main__":
-    # Define network architecture and parameters
-    layers = [4, 9, 5, 1]
-    epochs = 100
-    learning_rate = 0.01
-    momentum = 0.9
-    activation_function = 'sigmoid'  # Options: 'sigmoid', 'relu', 'tanh', 'linear'
-    validation_split = 0.2  # 20% of data used for test
-
-    nn = NeuralNet(layers, epochs, learning_rate, momentum, activation_function, validation_split)
-
-    # Example synthetic dataset
-    X = np.random.rand(100, 4)  # 100 samples, 4 features
-    y = np.random.rand(100, 1)  # 100 target values
-
-    nn.fit(X, y)
-    predictions = nn.predict(X)
-
-    # Visualize training and validation errors
-    nn.plot_errors()
 
 
 
