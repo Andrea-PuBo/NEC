@@ -108,19 +108,16 @@ class NeuralNet:
 
             print(f"Epoch {epoch + 1}/{self.epochs}, Train Loss: {train_loss}, Val Loss: {val_loss}")
 
-        print("Returning from fit...")
-        print("Train Losses:", self.train_losses)
-        print("Validation Losses:", self.val_losses)
-
-        # Return the recorded losses
-        return self.train_losses, self.val_losses
-
     def predict(self, X):
         # Generate predictions
         predictions = []
         for sample in X:
             predictions.append(self.forward(sample))
         return np.array(predictions)
+
+    def loss_epochs(self):
+        # Return the evolution of the training loss and the validation loss
+        return self.train_losses, self.val_losses
 
     def plot_errors(self):
         # Plot training and validation losses
