@@ -12,6 +12,7 @@ class NeuralNet:
         self.fact = fact  # Activation function
         self.val_split = val_split  # Validation set percentage
 
+        np.random.seed(42)
         # Initialize activations, weights, thresholds, and other variables
         self.h = [None] + [np.zeros(n) for n in layers[1:]]  # Fields
         self.xi = [None] + [np.zeros(n) for n in layers[1:]]  # Activations
@@ -119,11 +120,11 @@ class NeuralNet:
         # Compute the quadratic error
         total_error = 0
         num_samples = len(X)
-        for x, output in zip(X, y):
+        for x, y in zip(X, y):
             # Perform feed-forward for each pattern
             self.forward(x)
             # Compute quadratic error for this pattern
-            total_error += np.sum((self.xi[-1] - output) ** 2)
+            total_error += np.sum((self.xi[-1] - y) ** 2)
         # Return the mean quadratic error across all patterns
         return total_error / num_samples
 
@@ -143,51 +144,3 @@ class NeuralNet:
         plt.legend()
         plt.grid()
         plt.show()
-
-
-
-if __name__ == "__main__":
-    # Load dataset
-    df = pd.read_csv('../utils/A1-synthetic.csv', decimal=".")
-
-    from sklearn.preprocessing import MinMaxScaler
-
-    scaler = MinMaxScaler()
-    df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
-
-    columns = df_scaled.shape[1]
-
-    input_columns = df_scaled.columns[0: 9]  # Select the first 9 columns
-    features = df_scaled[input_columns].values
-
-    output_column = df_scaled.columns[9]  # Select the 10th column (index 9) as the target
-    targets = df_scaled[output_column].values
-
-    from sklearn.model_selection import train_test_split
-
-    X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=42)
-
-    # Initialize Neural Network
-    layers = [9, 8, 4, 1]  # Example: Input layer, two hidden layers, and output layer
-    nn = NeuralNet(
-        layers=layers,
-        epochs=100,
-        learning_rate=0.1,
-        momentum=0.8,
-        fact="sigmoid",  # Change activation as needed
-        val_split=0.2
-    )
-
-    # Train the Neural Network
-    nn.fit(X_train, y_train)
-
-    # Get the training and validation errors
-    train_errors, val_errors = nn.loss_epochs()
-
-    # Plot the training and validation errors
-    nn.plot_errors()
-
-
-
-
-
